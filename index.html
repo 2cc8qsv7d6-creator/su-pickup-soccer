@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SU Pickup Soccer 2.0</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f4;
+    --bg3: #eeede9;
+    --text: #1a1a1a;
+    --text2: #6b6b6b;
+    --text3: #999;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.2);
+    --blue: #3582de;
+    --blue-fill: rgba(53,130,222,0.2);
+    --green: #1a7a4a;
+    --green-bg: #e6f4ed;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --bg2: #2c2c2e;
+      --bg3: #3a3a3c;
+      --text: #f0f0f0;
+      --text2: #a0a0a0;
+      --text3: #6b6b6b;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.2);
+      --blue-fill: rgba(53,130,222,0.3);
+      --green: #4ade80;
+      --green-bg: #052e16;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+
+  /* LOGIN */
+  #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 14px; padding: 24px; }
+  #login-screen h1 { font-size: 26px; font-weight: 600; }
+  #login-screen p { font-size: 14px; color: var(--text2); }
+  #login-screen input, #login-screen button { width: 300px; padding: 11px 14px; font-size: 15px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); }
+  #login-screen button { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; cursor: pointer; }
+  #login-screen button:hover { opacity: 0.85; }
+
+  /* MAIN */
+  #main { display: none; max-width: 960px; margin: 0 auto; padding: 0 0 40px; }
+  #topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  #topbar-title { font-size: 16px; font-weight: 600; }
+  #topbar-left { font-size: 13px; color: var(--text2); }
+  #topbar-left span { color: var(--text); font-weight: 500; }
+  #topbar-right { display: flex; gap: 8px; }
+  #topbar-right button { font-size: 13px; padding: 6px 12px; border: 1px solid var(--border2); border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; }
+  #topbar-right button:hover { background: var(--bg2); }
+  #topbar-right button.active { background: var(--bg2); font-weight: 500; }
+
+  /* SEARCH */
+  #search-bar { padding: 16px 20px 8px; }
+  #search-bar input { width: 100%; padding: 9px 14px; font-size: 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); }
+
+  /* CARDS */
+  #cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 12px; padding: 12px 20px; }
+  .player-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 12px 10px; background: var(--bg); cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+  .player-card:hover { border-color: var(--blue); transform: translateY(-2px); }
+  .player-avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: var(--text2); margin: 0 auto 8px; overflow: hidden; }
+  .player-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .player-name { font-size: 13px; font-weight: 500; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  .player-overall { font-size: 28px; font-weight: 700; text-align: center; color: var(--blue); line-height: 1.1; }
+  .player-overall-na { font-size: 20px; font-weight: 400; color: var(--text3); text-align: center; }
+  .player-votes { font-size: 11px; color: var(--text3); text-align: center; margin-bottom: 6px; }
+  .voted-badge { font-size: 10px; color: var(--green); background: var(--green-bg); border-radius: 20px; padding: 2px 8px; text-align: center; margin-bottom: 6px; display: inline-block; width: 100%; }
+  .card-radar { display: block; margin: 4px auto 0; }
+
+  /* MODAL */
+  #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+  #modal-overlay.open { display: flex; }
+  #modal { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); width: 500px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; }
+  #modal-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  #modal-avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600; color: var(--text2); flex-shrink: 0; overflow: hidden; }
+  #modal-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  #modal-title { font-size: 20px; font-weight: 600; }
+  #modal-sub { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  #modal-close { margin-left: auto; font-size: 20px; background: none; border: none; color: var(--text2); cursor: pointer; padding: 4px 8px; align-self: flex-start; }
+  #modal-radar-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
+  #vote-section { border-top: 1px solid var(--border); padding-top: 16px; }
+  #vote-section h3 { font-size: 14px; font-weight: 500; margin-bottom: 12px; }
+  .skill-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .skill-label { font-size: 12px; color: var(--text2); width: 78px; flex-shrink: 0; }
+  .skill-row input[type=range] { flex: 1; accent-color: var(--blue); }
+  .skill-val { font-size: 13px; font-weight: 600; color: var(--blue); width: 20px; text-align: right; }
+  #vote-btn { width: 100%; margin-top: 16px; padding: 11px; font-size: 14px; font-weight: 600; border: none; border-radius: var(--radius); background: var(--blue); color: #fff; cursor: pointer; }
+  #vote-btn:hover { opacity: 0.88; }
+  #vote-btn:disabled { background: var(--bg2); color: var(--text3); cursor: default; }
+
+  /* ADMIN */
+  #admin-panel { display: none; padding: 20px; }
+  #admin-panel h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+  #admin-pass-wrap { display: flex; gap: 8px; margin-bottom: 12px; }
+  #admin-pass-wrap input { flex: 1; padding: 9px 12px; font-size: 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); }
+  #admin-pass-wrap button { padding: 9px 16px; font-size: 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); cursor: pointer; }
+  #admin-locked-msg { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+  #add-player-form { display: flex; gap: 8px; margin-bottom: 20px; }
+  #add-player-form input { flex: 1; padding: 9px 12px; font-size: 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); }
+  #add-player-form button { padding: 9px 16px; font-size: 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); cursor: pointer; white-space: nowrap; }
+  #admin-player-list { display: flex; flex-direction: column; gap: 8px; }
+  .admin-player-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg); }
+  .admin-player-row .remove-btn { font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 2px 6px; }
+  .admin-player-row .remove-btn:hover { color: #e24b4a; }
+
+  /* LOADING / STATUS */
+  #loading-overlay { position: fixed; inset: 0; background: var(--bg3); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; gap: 12px; }
+  #loading-overlay p { font-size: 14px; color: var(--text2); }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  #empty-state { grid-column: 1/-1; text-align: center; color: var(--text2); font-size: 14px; padding: 48px 0; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <p>Loading SU Pickup Soccer 2.0...</p>
+</div>
+
+<div id="login-screen" style="display:none;">
+  <h1>SU Pickup Soccer 2.0</h1>
+  <p>Enter your name to access player ratings</p>
+  <input id="username-input" type="text" placeholder="Your name..." maxlength="30" autocomplete="off"/>
+  <button id="login-btn">Enter</button>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <div id="topbar-left">Hi, <span id="current-user-label"></span></div>
+    <div id="topbar-title">SU Pickup Soccer 2.0</div>
+    <div id="topbar-right">
+      <button id="tab-players" class="active">Players</button>
+      <button id="tab-admin">Admin</button>
+      <button id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div id="players-panel">
+    <div id="search-bar"><input id="search-input" type="text" placeholder="Search players..."/></div>
+    <div id="cards-grid"><div id="empty-state">No players yet. Ask the admin to add some.</div></div>
+  </div>
+
+  <div id="admin-panel">
+    <h2>Admin panel</h2>
+    <div id="admin-pass-wrap">
+      <input id="admin-pass-input" type="password" placeholder="Admin password..."/>
+      <button id="admin-unlock-btn">Unlock</button>
+    </div>
+    <div id="admin-locked-msg">Enter the admin password to manage players.</div>
+    <div id="admin-content" style="display:none;">
+      <div id="add-player-form">
+        <input id="new-player-input" type="text" placeholder="Player full name..." maxlength="40"/>
+        <button id="add-player-btn">Add player</button>
+      </div>
+      <div id="admin-player-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <div id="modal-header">
+      <div id="modal-avatar"></div>
+      <div>
+        <div id="modal-title"></div>
+        <div id="modal-sub"></div>
+      </div>
+      <button id="modal-close">&#x2715;</button>
+    </div>
+    <div id="modal-radar-wrap"><canvas id="modal-radar" width="260" height="260"></canvas></div>
+    <div id="vote-section">
+      <h3 id="vote-heading">Rate this player</h3>
+      <div id="skills-sliders"></div>
+      <button id="vote-btn">Submit ratings</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzksQctXWoKHXYW2RFBRZHrGK7O0JECxE5hSOYLv-QRqP8MO9SLLs52lm-gIeh2FDFd/exec';
+const SKILLS = ['Pace','Stamina','Power','Accuracy','Dribbling','Defending','Passing','Teamwork','Vision','Aggression'];
+const ADMIN_PASSWORD = 'supickup2025';
+
+let state = { players: [], votes: {} };
+let currentUser = null;
+let adminUnlocked = false;
+let currentPlayerId = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function apiGet(key) {
+  const r = await fetch(`${API}?action=getAll`);
+  const d = await r.json();
+  const row = (d.data || []).find(r => r[0] === key);
+  return row ? JSON.parse(row[1]) : null;
+}
+
+async function apiSet(key, value) {
+  const url = `${API}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(JSON.stringify(value))}`;
+  await fetch(url);
+}
+
+async function loadState() {
+  try {
+    const r = await fetch(`${API}?action=getAll`);
+    const d = await r.json();
+    const rows = d.data || [];
+    rows.forEach(row => {
+      if (row[0] === 'players') state.players = JSON.parse(row[1]);
+      if (row[0] === 'votes') state.votes = JSON.parse(row[1]);
+    });
+  } catch(e) { console.error('Load error', e); }
+}
+
+async function savePlayers() { await apiSet('players', state.players); }
+async function saveVotes() { await apiSet('votes', state.votes); }
+
+function getInitials(name) {
+  return name.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function getOverall(pid) {
+  const pv = state.votes[pid];
+  if (!pv || !Object.keys(pv).length) return null;
+  let totals = SKILLS.map(()=>0), counts = SKILLS.map(()=>0);
+  Object.values(pv).forEach(sv => {
+    SKILLS.forEach((s,i) => { if (sv[s]!=null) { totals[i]+=sv[s]; counts[i]++; } });
+  });
+  const avgs = totals.map((t,i) => counts[i]>0?t/counts[i]:null).filter(v=>v!=null);
+  return avgs.length ? Math.round(avgs.reduce((a,b)=>a+b,0)/avgs.length) : null;
+}
+
+function getSkillAvgs(pid) {
+  const pv = state.votes[pid];
+  if (!pv) return SKILLS.map(()=>0);
+  return SKILLS.map(s => {
+    const vals = Object.values(pv).map(v=>v[s]).filter(v=>v!=null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  });
+}
+
+function getVoteCount(pid) { const pv=state.votes[pid]; return pv?Object.keys(pv).length:0; }
+function hasVoted(pid) { return !!(state.votes[pid] && state.votes[pid][currentUser]); }
+
+function drawRadar(canvas, avgs, size, labelSize) {
+  const ctx = canvas.getContext('2d');
+  const cx=size/2, cy=size/2, r=size/2-(labelSize?22:10);
+  const n=SKILLS.length;
+  const angles = SKILLS.map((_,i)=>(i/n)*2*Math.PI-Math.PI/2);
+  const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+  const grid = isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.09)';
+  const fill = isDark?'rgba(53,130,222,0.32)':'rgba(53,130,222,0.22)';
+  ctx.clearRect(0,0,size,size);
+  [0.2,0.4,0.6,0.8,1].forEach(l=>{
+    ctx.beginPath();
+    angles.forEach((a,i)=>{ const x=cx+Math.cos(a)*r*l,y=cy+Math.sin(a)*r*l; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.closePath(); ctx.strokeStyle=grid; ctx.lineWidth=0.6; ctx.stroke();
+  });
+  angles.forEach(a=>{ ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r); ctx.strokeStyle=grid; ctx.lineWidth=0.6; ctx.stroke(); });
+  ctx.beginPath();
+  angles.forEach((a,i)=>{ const v=(avgs[i]||0)/10,x=cx+Math.cos(a)*r*v,y=cy+Math.sin(a)*r*v; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.closePath(); ctx.fillStyle=fill; ctx.fill(); ctx.strokeStyle='#3582de'; ctx.lineWidth=labelSize?2:1.5; ctx.stroke();
+  if (labelSize) {
+    ctx.font=`${labelSize}px -apple-system,sans-serif`;
+    ctx.fillStyle=isDark?'rgba(255,255,255,0.65)':'rgba(0,0,0,0.55)';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    angles.forEach((a,i)=>{ const lr=r+20,x=cx+Math.cos(a)*lr,y=cy+Math.sin(a)*lr; ctx.fillText(SKILLS[i],x,y); });
+  }
+}
+
+function renderCards(filter='') {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML='';
+  const list = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
+  if (!list.length) { grid.innerHTML='<div id="empty-state">No players found.</div>'; return; }
+  list.forEach(p=>{
+    const avgs=getSkillAvgs(p.id), overall=getOverall(p.id), votes=getVoteCount(p.id), voted=hasVoted(p.id);
+    const card=document.createElement('div'); card.className='player-card';
+    card.innerHTML=`
+      <div class="player-avatar">${p.photo?`<img src="${p.photo}" alt="${p.name}"/>`:`<span>${getInitials(p.name)}</span>`}</div>
+      <div class="player-name">${p.name}</div>
+      ${overall!=null?`<div class="player-overall">${overall}</div>`:`<div class="player-overall-na">--</div>`}
+      <div class="player-votes">${votes} vote${votes!==1?'s':''}</div>
+      ${voted?'<div class="voted-badge">Voted</div>':''}
+      <canvas class="card-radar" width="120" height="120"></canvas>
+    `;
+    grid.appendChild(card);
+    drawRadar(card.querySelector('.card-radar'), avgs, 120, 0);
+    card.addEventListener('click',()=>openModal(p.id));
+  });
+}
+
+function openModal(pid) {
+  currentPlayerId=pid;
+  const p=state.players.find(x=>x.id===pid); if(!p)return;
+  const avgs=getSkillAvgs(pid), overall=getOverall(pid), votes=getVoteCount(pid), voted=hasVoted(pid);
+  const av=document.getElementById('modal-avatar');
+  av.innerHTML=p.photo?`<img src="${p.photo}" alt="${p.name}"/>`:`<span>${getInitials(p.name)}</span>`;
+  document.getElementById('modal-title').textContent=p.name;
+  document.getElementById('modal-sub').textContent=`Overall: ${overall??'--'} · ${votes} vote${votes!==1?'s':''}`;
+  drawRadar(document.getElementById('modal-radar'), avgs, 260, 11);
+  const userVotes=voted?state.votes[pid][currentUser]:{};
+  document.getElementById('skills-sliders').innerHTML=SKILLS.map(s=>`
+    <div class="skill-row">
+      <span class="skill-label">${s}</span>
+      <input type="range" min="0" max="10" step="1" value="${userVotes[s]!=null?userVotes[s]:5}" data-skill="${s}" ${voted?'disabled':''}/>
+      <span class="skill-val" id="sv-${s}">${userVotes[s]!=null?userVotes[s]:5}</span>
+    </div>
+  `).join('');
+  document.querySelectorAll('#skills-sliders input[type=range]').forEach(inp=>{
+    inp.addEventListener('input',()=>{ document.getElementById('sv-'+inp.dataset.skill).textContent=inp.value; });
+  });
+  const btn=document.getElementById('vote-btn');
+  const heading=document.getElementById('vote-heading');
+  if (voted) { btn.textContent='Already voted'; btn.disabled=true; heading.textContent='Your ratings'; }
+  else if (currentUser===p.name) { btn.textContent="Can't rate yourself"; btn.disabled=true; heading.textContent='Player stats'; }
+  else { btn.textContent='Submit ratings'; btn.disabled=false; heading.textContent='Rate this player'; }
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+document.getElementById('vote-btn').addEventListener('click', async()=>{
+  if(!currentPlayerId||!currentUser)return;
+  const p=state.players.find(x=>x.id===currentPlayerId);
+  if(!p||hasVoted(currentPlayerId)||currentUser===p.name)return;
+  const skillVotes={};
+  document.querySelectorAll('#skills-sliders input[type=range]').forEach(inp=>{ skillVotes[inp.dataset.skill]=parseInt(inp.value); });
+  if(!state.votes[currentPlayerId])state.votes[currentPlayerId]={};
+  state.votes[currentPlayerId][currentUser]=skillVotes;
+  document.getElementById('vote-btn').textContent='Saving...'; document.getElementById('vote-btn').disabled=true;
+  await saveVotes();
+  showToast('Ratings saved!');
+  document.getElementById('modal-overlay').classList.remove('open');
+  renderCards(document.getElementById('search-input').value);
+});
+
+document.getElementById('modal-close').addEventListener('click',()=>document.getElementById('modal-overlay').classList.remove('open'));
+document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target===document.getElementById('modal-overlay'))document.getElementById('modal-overlay').classList.remove('open'); });
+
+function login() {
+  const name=document.getElementById('username-input').value.trim(); if(!name)return;
+  currentUser=name;
+  document.getElementById('current-user-label').textContent=name;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main').style.display='block';
+  renderCards();
+}
+document.getElementById('login-btn').addEventListener('click',login);
+document.getElementById('username-input').addEventListener('keydown',e=>{ if(e.key==='Enter')login(); });
+
+document.getElementById('logout-btn').addEventListener('click',()=>{
+  currentUser=null; adminUnlocked=false;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('main').style.display='none';
+  document.getElementById('username-input').value='';
+  document.getElementById('admin-content').style.display='none';
+  document.getElementById('admin-pass-input').value='';
+});
+
+document.getElementById('search-input').addEventListener('input',e=>renderCards(e.target.value));
+
+document.getElementById('tab-players').addEventListener('click',()=>{
+  document.getElementById('players-panel').style.display='block';
+  document.getElementById('admin-panel').style.display='none';
+  document.getElementById('tab-players').classList.add('active');
+  document.getElementById('tab-admin').classList.remove('active');
+});
+document.getElementById('tab-admin').addEventListener('click',()=>{
+  document.getElementById('players-panel').style.display='none';
+  document.getElementById('admin-panel').style.display='block';
+  document.getElementById('tab-players').classList.remove('active');
+  document.getElementById('tab-admin').classList.add('active');
+  renderAdminList();
+});
+
+document.getElementById('admin-unlock-btn').addEventListener('click',()=>{
+  if(document.getElementById('admin-pass-input').value===ADMIN_PASSWORD){
+    adminUnlocked=true;
+    document.getElementById('admin-content').style.display='block';
+    document.getElementById('admin-locked-msg').style.display='none';
+    renderAdminList();
+  } else {
+    document.getElementById('admin-locked-msg').textContent='Incorrect password. Try again.';
+  }
+});
+
+document.getElementById('add-player-btn').addEventListener('click',async()=>{
+  const name=document.getElementById('new-player-input').value.trim();
+  if(!name||!adminUnlocked)return;
+  if(state.players.find(p=>p.name.toLowerCase()===name.toLowerCase())){ showToast('Player already exists.'); return; }
+  state.players.push({id:'p'+Date.now(),name});
+  document.getElementById('new-player-input').value='';
+  document.getElementById('add-player-btn').textContent='Saving...';
+  await savePlayers();
+  document.getElementById('add-player-btn').textContent='Add player';
+  showToast(`${name} added!`);
+  renderAdminList();
+  renderCards(document.getElementById('search-input').value);
+});
+document.getElementById('new-player-input').addEventListener('keydown',e=>{ if(e.key==='Enter')document.getElementById('add-player-btn').click(); });
+
+function renderAdminList() {
+  if(!adminUnlocked)return;
+  const list=document.getElementById('admin-player-list');
+  list.innerHTML='';
+  if(!state.players.length){ list.innerHTML='<div style="font-size:13px;color:var(--text2)">No players yet.</div>'; return; }
+  state.players.forEach(p=>{
+    const row=document.createElement('div'); row.className='admin-player-row';
+    row.innerHTML=`<span>${p.name}</span><span style="font-size:12px;color:var(--text3)">${getVoteCount(p.id)} vote${getVoteCount(p.id)!==1?'s':''}</span><button class="remove-btn" data-id="${p.id}">Remove</button>`;
+    row.querySelector('.remove-btn').addEventListener('click',async()=>{
+      if(!confirm(`Remove ${p.name}? This will delete all their votes too.`))return;
+      state.players=state.players.filter(x=>x.id!==p.id);
+      delete state.votes[p.id];
+      await savePlayers(); await saveVotes();
+      showToast(`${p.name} removed.`);
+      renderAdminList();
+      renderCards(document.getElementById('search-input').value);
+    });
+    list.appendChild(row);
+  });
+}
+
+loadState().then(()=>{
+  document.getElementById('loading-overlay').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+});
+</script>
+</body>
+</html>
