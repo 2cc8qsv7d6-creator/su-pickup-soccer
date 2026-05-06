@@ -811,6 +811,8 @@ let lbCat = 'OVR';
 let profileFoot = 'R';
 let profileFlag = '🌍';
 let profilePositions = [];
+// When admin is editing another player, this holds that player's id; null otherwise
+let adminEditingPlayerId = null;
 
 // Profile data stored in Google Sheets backend (profiles key)
 function loadProfile(name) {
@@ -890,10 +892,21 @@ async function loadState() {
   } catch(e) { console.error(e); state.players=DEFAULT_PLAYERS; }
 }
 async function apiSet(key,value) {
-  await fetch(`${API}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(JSON.stringify(value))}`);
+  // Use POST so we can send large payloads (photos as base64) without URL length limit
+  const body = new URLSearchParams();
+  body.append('action', 'set');
+  body.append('key', key);
+  body.append('value', JSON.stringify(value));
+  const res = await fetch(API, { method: 'POST', body });
+  if (!res.ok) throw new Error('apiSet failed: ' + res.status);
 }
 async function logVote(playerName,skillVotes) {
-  await fetch(`${API}?action=log&voter=${encodeURIComponent(currentUser)}&player=${encodeURIComponent(playerName)}&skills=${encodeURIComponent(JSON.stringify(skillVotes))}`);
+  const body = new URLSearchParams();
+  body.append('action', 'log');
+  body.append('voter', currentUser);
+  body.append('player', playerName);
+  body.append('skills', JSON.stringify(skillVotes));
+  await fetch(API, { method: 'POST', body });
 }
 async function savePlayers() { await apiSet('players',state.players); }
 async function saveVotes() { await apiSet('votes',state.votes); }
@@ -1111,7 +1124,15 @@ function showMainTab(tab) {
   });
 }
 document.getElementById('tab-squad').addEventListener('click', ()=>showMainTab('squad'));
-document.getElementById('tab-profile').addEventListener('click', ()=>{ loadProfileUI(); showMainTab('profile'); });
+document.getElementById('tab-profile').addEventListener('click', ()=>{
+  // If admin was mid-edit and clicked Profile tab directly, exit edit mode first
+  if (adminEditingPlayerId) {
+    adminEditingPlayerId = null;
+    hideAdminEditBanner();
+  }
+  loadProfileUI();
+  showMainTab('profile');
+});
 document.getElementById('tab-admin').addEventListener('click', ()=>showMainTab('admin'));
 
 // ─── SORT ────────────────────────────────────────────────────────
@@ -1143,11 +1164,45 @@ document.getElementById('logout-btn').addEventListener('click', ()=>{
 });
 
 // ─── PROFILE ─────────────────────────────────────────────────────
-function buildFlagGrid() {
+function buildFlagGrid(filter) {
+  filter = (filter||'').toLowerCase();
   const grid = document.getElementById('flag-grid');
-  grid.innerHTML = FLAGS.map(f => `
-    <button class="flag-btn ${f.c===profileFlag?'active':''}" onclick="selectFlag('${f.c}','${f.n}')">${f.c}</button>
+  // Override the design's 6-column grid with a vertical list (using inline styles so design CSS file is untouched)
+  grid.style.display = 'flex';
+  grid.style.flexDirection = 'column';
+  grid.style.gap = '0';
+  grid.style.maxHeight = '260px';
+  grid.style.overflowY = 'auto';
+  grid.style.padding = '0';
+  // Search input at top
+  const list = FLAGS.filter(f => f.n.toLowerCase().includes(filter));
+  const items = list.map(f => `
+    <button class="flag-btn ${f.c===profileFlag?'active':''}"
+      onclick="selectFlag('${f.c}',&quot;${f.n.replace(/"/g,'&quot;')}&quot;)"
+      style="display:flex;align-items:center;gap:10px;padding:9px 12px;width:100%;text-align:left;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);background:transparent;border-radius:0;border-left:none;border-right:none;border-top:none;cursor:pointer;">
+      <span style="font-size:18px;flex-shrink:0;">${f.c}</span>
+      <span style="flex:1;text-align:left;">${f.n}</span>
+      ${f.c===profileFlag?'<span style="color:var(--gold);font-size:11px;">✓</span>':''}
+    </button>
   `).join('');
+  const empty = list.length === 0 ? '<div style="padding:14px;color:var(--text3);font-size:13px;text-align:center;">No countries match.</div>' : '';
+  // Search box uses the design's existing field-input class for visual consistency
+  grid.innerHTML = `
+    <div style="padding:8px 8px 6px;position:sticky;top:0;background:var(--surface);z-index:1;">
+      <input id="flag-search-input" class="field-input" type="text" placeholder="Search countries..." value="${filter}" autocomplete="off"
+        style="width:100%;padding:8px 12px;font-size:13px;"/>
+    </div>
+    ${items}${empty}
+  `;
+  const searchInput = document.getElementById('flag-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', e => buildFlagGrid(e.target.value));
+    // keep focus on the input as the user types
+    if (filter) {
+      searchInput.focus();
+      searchInput.setSelectionRange(filter.length, filter.length);
+    }
+  }
 }
 function selectFlag(c, n) {
   profileFlag = c;
@@ -1207,22 +1262,47 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
   btn.textContent = 'SAVING...';
   btn.disabled = true;
   try {
-    const name = document.getElementById('profile-name').value.trim();
     const age = document.getElementById('profile-age').value;
     const ht = document.getElementById('profile-height').value.trim();
-    const existing = loadProfile(currentUser);
-    const data = { ...existing, name, age, ht, foot: profileFoot, flag: profileFlag, positions: profilePositions };
-    await saveProfileData(currentUser, data);
-    // update player record if it exists
-    const p = state.players.find(x=>x.name===currentUser);
-    if (p) {
-      p.age = age || '--'; p.ht = ht || '--';
-      p.foot = profileFoot; p.flag = profileFlag;
+
+    if (adminEditingPlayerId) {
+      // ── Admin edit mode: update the target player's info, NOT the admin's profile ──
+      const p = state.players.find(x=>x.id===adminEditingPlayerId);
+      if (!p) throw new Error('Player not found');
+      p.age = age || '--';
+      p.ht = ht || '--';
+      p.foot = profileFoot;
+      p.flag = profileFlag;
       p.pos = profilePositions[0] || p.pos || '--';
       await savePlayers();
+      // Also keep the player's profile record in sync (so it shows up in their UI too)
+      const existing = state.profiles[p.name] || {};
+      const updated = { ...existing, name: p.name, age, ht, foot: profileFoot, flag: profileFlag, positions: profilePositions };
+      await saveProfileData(p.name, updated);
+      showToast(p.name + ' updated!');
+      // Exit admin-edit mode and go back to admin tab
+      adminEditingPlayerId = null;
+      hideAdminEditBanner();
+      loadProfileUI();
+      renderCards();
+      renderAdminList();
+      showMainTab('admin');
+    } else {
+      // ── Normal user mode: save current user's profile ──
+      const name = document.getElementById('profile-name').value.trim();
+      const existing = loadProfile(currentUser);
+      const data = { ...existing, name, age, ht, foot: profileFoot, flag: profileFlag, positions: profilePositions };
+      await saveProfileData(currentUser, data);
+      const p = state.players.find(x=>x.name===currentUser);
+      if (p) {
+        p.age = age || '--'; p.ht = ht || '--';
+        p.foot = profileFoot; p.flag = profileFlag;
+        p.pos = profilePositions[0] || p.pos || '--';
+        await savePlayers();
+      }
+      showToast('Profile saved!');
+      renderCards(document.getElementById('search-input').value);
     }
-    showToast('Profile saved!');
-    renderCards(document.getElementById('search-input').value);
   } catch (e) {
     console.error(e);
     showToast('Save failed. Try again.');
@@ -1238,22 +1318,29 @@ function compressImage(dataUrl, maxSize) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const targetDim = 320; // 320x320 max
-      let w = img.width, h = img.height;
-      if (w > h) { if (w > targetDim) { h = h * targetDim / w; w = targetDim; } }
-      else { if (h > targetDim) { w = w * targetDim / h; h = targetDim; } }
+      // Start at 256px and drop dimensions if quality alone can't get us under the size
+      const dims = [256, 200, 160, 128];
+      const tryDim = (idx) => {
+        if (idx >= dims.length) { resolve(canvas.toDataURL('image/jpeg', 0.4)); return; }
+        const targetDim = dims[idx];
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > targetDim) { h = h * targetDim / w; w = targetDim; } }
+        else { if (h > targetDim) { w = w * targetDim / h; h = targetDim; } }
+        canvas.width = w; canvas.height = h;
+        ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img, 0, 0, w, h);
+        let quality = 0.75;
+        let out = canvas.toDataURL('image/jpeg', quality);
+        while (out.length > maxSize && quality > 0.3) {
+          quality -= 0.1;
+          out = canvas.toDataURL('image/jpeg', quality);
+        }
+        if (out.length <= maxSize) { resolve(out); return; }
+        tryDim(idx + 1);
+      };
       const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      // Try progressively lower quality until it fits
-      let quality = 0.8;
-      let out = canvas.toDataURL('image/jpeg', quality);
-      while (out.length > maxSize && quality > 0.2) {
-        quality -= 0.1;
-        out = canvas.toDataURL('image/jpeg', quality);
-      }
-      resolve(out);
+      tryDim(0);
     };
     img.onerror = reject;
     img.src = dataUrl;
@@ -1266,15 +1353,30 @@ document.getElementById('photo-input').addEventListener('change', e => {
   reader.onload = async ev => {
     showToast('Compressing photo...');
     try {
-      const compressed = await compressImage(ev.target.result, 45000);
+      const compressed = await compressImage(ev.target.result, 30000);
       document.getElementById('profile-photo-box').innerHTML = `<img src="${compressed}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/>`;
       showToast('Saving photo...');
-      const data = loadProfile(currentUser);
-      data.photo = compressed;
-      await saveProfileData(currentUser, data);
-      const p = state.players.find(x=>x.name===currentUser);
-      if (p) { p.photo = compressed; await savePlayers(); renderCards(); }
-      showToast('Photo saved!');
+      if (adminEditingPlayerId) {
+        // Admin uploading photo for another player
+        const p = state.players.find(x=>x.id===adminEditingPlayerId);
+        if (p) {
+          p.photo = compressed;
+          await savePlayers();
+          const existing = state.profiles[p.name] || {};
+          existing.photo = compressed;
+          await saveProfileData(p.name, existing);
+          renderCards();
+          showToast('Photo saved for ' + p.name + '!');
+        }
+      } else {
+        // Normal user mode
+        const data = loadProfile(currentUser);
+        data.photo = compressed;
+        await saveProfileData(currentUser, data);
+        const p = state.players.find(x=>x.name===currentUser);
+        if (p) { p.photo = compressed; await savePlayers(); renderCards(); }
+        showToast('Photo saved!');
+      }
     } catch (err) {
       console.error(err);
       showToast('Photo upload failed.');
@@ -1343,6 +1445,69 @@ document.getElementById('add-player-btn').addEventListener('click', async () => 
 });
 document.getElementById('new-player-input').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('add-player-btn').click(); });
 
+// ── Admin: start editing a player's info (uses the Profile screen as the editor) ──
+function startAdminEdit(playerId) {
+  const p = state.players.find(x=>x.id===playerId);
+  if (!p) return;
+  adminEditingPlayerId = playerId;
+  // Try to find a saved profile by player name; otherwise build from player record
+  const prof = state.profiles[p.name] || {};
+  document.getElementById('profile-name').value = p.name;
+  document.getElementById('profile-age').value = (prof.age || (p.age && p.age!=='--' ? p.age : '')) || '';
+  document.getElementById('profile-height').value = (prof.ht || (p.ht && p.ht!=='--' ? p.ht : '')) || '';
+  profileFoot = prof.foot || p.foot || 'R';
+  profileFlag = prof.flag || p.flag || '🌍';
+  profilePositions = prof.positions || (p.pos && p.pos!=='--' ? [p.pos] : []);
+  document.querySelectorAll('#foot-group .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.foot===profileFoot));
+  document.getElementById('nationality-flag').textContent = profileFlag;
+  const flagObj = FLAGS.find(f=>f.c===profileFlag);
+  document.getElementById('nationality-name').textContent = flagObj ? flagObj.n : 'Select country';
+  buildPosGrid('pos-grid', profilePositions, toggleProfilePos);
+  // Photo
+  const photoBox = document.getElementById('profile-photo-box');
+  if (p.photo) {
+    photoBox.innerHTML = `<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/>`;
+  } else if (prof.photo) {
+    photoBox.innerHTML = `<img src="${prof.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/>`;
+  }
+  // Show a banner at the top of the profile so it's clear we're in admin-edit mode
+  showAdminEditBanner(p.name);
+  // Switch to profile tab
+  showMainTab('profile');
+}
+
+function cancelAdminEdit() {
+  adminEditingPlayerId = null;
+  hideAdminEditBanner();
+  // Reload the actual current user's profile so the Profile tab is back to normal
+  loadProfileUI();
+  showMainTab('admin');
+}
+
+function showAdminEditBanner(playerName) {
+  let banner = document.getElementById('admin-edit-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'admin-edit-banner';
+    banner.style.cssText = 'background:rgba(255,216,155,0.08);border:1px solid rgba(255,216,155,0.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;';
+    const profileScreen = document.getElementById('panel-profile');
+    if (profileScreen) profileScreen.insertBefore(banner, profileScreen.firstChild);
+  }
+  banner.innerHTML = `
+    <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:1px;color:var(--gold);">
+      ADMIN EDIT &middot; <span style="color:var(--text);">${playerName}</span>
+    </div>
+    <button id="admin-edit-cancel-btn" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:var(--font-display);font-size:9px;font-weight:900;cursor:pointer;">CANCEL</button>
+  `;
+  document.getElementById('admin-edit-cancel-btn').addEventListener('click', cancelAdminEdit);
+  banner.style.display = 'flex';
+}
+
+function hideAdminEditBanner() {
+  const banner = document.getElementById('admin-edit-banner');
+  if (banner) banner.style.display = 'none';
+}
+
 function renderAdminList() {
   document.getElementById('admin-player-count').textContent = state.players.length + ' PLAYERS';
   const list = document.getElementById('admin-player-list');
@@ -1361,8 +1526,12 @@ function renderAdminList() {
             <button class="btn-remove" data-id="${p.id}">REMOVE</button>
             <button class="btn-cancel" data-cancel="${p.id}">CANCEL</button>
            </div>`
-        : `<button class="btn-remove-trigger" data-trigger="${p.id}">✕</button>`}
+        : `<div style="display:flex;gap:5px;">
+            <button class="btn-cancel" data-edit="${p.id}" style="color:var(--gold);border-color:rgba(255,216,155,0.3);">EDIT</button>
+            <button class="btn-remove-trigger" data-trigger="${p.id}">✕</button>
+           </div>`}
     `;
+    row.querySelector('[data-edit]')?.addEventListener('click', ()=>{ startAdminEdit(p.id); });
     row.querySelector('[data-trigger]')?.addEventListener('click', ()=>{ confirmRemoveId=p.id; renderAdminList(); });
     row.querySelector('[data-cancel]')?.addEventListener('click', ()=>{ confirmRemoveId=null; renderAdminList(); });
     row.querySelector('[data-id]')?.addEventListener('click', async ()=>{
