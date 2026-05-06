@@ -7,47 +7,29 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #ffffff;
-    --bg2: #f5f5f4;
-    --bg3: #eeede9;
-    --text: #1a1a1a;
-    --text2: #6b6b6b;
-    --text3: #999;
-    --border: rgba(0,0,0,0.12);
-    --border2: rgba(0,0,0,0.2);
-    --blue: #3582de;
-    --blue-fill: rgba(53,130,222,0.2);
-    --green: #1a7a4a;
-    --green-bg: #e6f4ed;
-    --radius: 8px;
-    --radius-lg: 12px;
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede9;
+    --text: #1a1a1a; --text2: #6b6b6b; --text3: #999;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --blue: #3582de; --blue-fill: rgba(53,130,222,0.2);
+    --green: #1a7a4a; --green-bg: #e6f4ed;
+    --radius: 8px; --radius-lg: 12px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #1c1c1e;
-      --bg2: #2c2c2e;
-      --bg3: #3a3a3c;
-      --text: #f0f0f0;
-      --text2: #a0a0a0;
-      --text3: #6b6b6b;
-      --border: rgba(255,255,255,0.1);
-      --border2: rgba(255,255,255,0.2);
+      --bg: #1c1c1e; --bg2: #2c2c2e; --bg3: #3a3a3c;
+      --text: #f0f0f0; --text2: #a0a0a0; --text3: #6b6b6b;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
       --blue-fill: rgba(53,130,222,0.3);
-      --green: #4ade80;
-      --green-bg: #052e16;
+      --green: #4ade80; --green-bg: #052e16;
     }
   }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
-
-  /* LOGIN */
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 14px; padding: 24px; }
   #login-screen h1 { font-size: 26px; font-weight: 600; }
   #login-screen p { font-size: 14px; color: var(--text2); }
   #login-screen input, #login-screen button { width: 300px; padding: 11px 14px; font-size: 15px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg); color: var(--text); }
   #login-screen button { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; cursor: pointer; }
   #login-screen button:hover { opacity: 0.85; }
-
-  /* MAIN */
   #main { display: none; max-width: 960px; margin: 0 auto; padding: 0 0 40px; }
   #topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
   #topbar-title { font-size: 16px; font-weight: 600; }
@@ -57,12 +39,8 @@
   #topbar-right button { font-size: 13px; padding: 6px 12px; border: 1px solid var(--border2); border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; }
   #topbar-right button:hover { background: var(--bg2); }
   #topbar-right button.active { background: var(--bg2); font-weight: 500; }
-
-  /* SEARCH */
   #search-bar { padding: 16px 20px 8px; }
   #search-bar input { width: 100%; padding: 9px 14px; font-size: 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); }
-
-  /* CARDS */
   #cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 12px; padding: 12px 20px; }
   .player-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 12px 10px; background: var(--bg); cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
   .player-card:hover { border-color: var(--blue); transform: translateY(-2px); }
@@ -74,8 +52,6 @@
   .player-votes { font-size: 11px; color: var(--text3); text-align: center; margin-bottom: 6px; }
   .voted-badge { font-size: 10px; color: var(--green); background: var(--green-bg); border-radius: 20px; padding: 2px 8px; text-align: center; margin-bottom: 6px; display: inline-block; width: 100%; }
   .card-radar { display: block; margin: 4px auto 0; }
-
-  /* MODAL */
   #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
   #modal-overlay.open { display: flex; }
   #modal { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); width: 500px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; }
@@ -95,8 +71,6 @@
   #vote-btn { width: 100%; margin-top: 16px; padding: 11px; font-size: 14px; font-weight: 600; border: none; border-radius: var(--radius); background: var(--blue); color: #fff; cursor: pointer; }
   #vote-btn:hover { opacity: 0.88; }
   #vote-btn:disabled { background: var(--bg2); color: var(--text3); cursor: default; }
-
-  /* ADMIN */
   #admin-panel { display: none; padding: 20px; }
   #admin-panel h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
   #admin-pass-wrap { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -110,8 +84,6 @@
   .admin-player-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg); }
   .admin-player-row .remove-btn { font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 2px 6px; }
   .admin-player-row .remove-btn:hover { color: #e24b4a; }
-
-  /* LOADING / STATUS */
   #loading-overlay { position: fixed; inset: 0; background: var(--bg3); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; gap: 12px; }
   #loading-overlay p { font-size: 14px; color: var(--text2); }
   .spinner { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
@@ -122,19 +94,13 @@
 </style>
 </head>
 <body>
-
-<div id="loading-overlay">
-  <div class="spinner"></div>
-  <p>Loading SU Pickup Soccer 2.0...</p>
-</div>
-
+<div id="loading-overlay"><div class="spinner"></div><p>Loading SU Pickup Soccer 2.0...</p></div>
 <div id="login-screen" style="display:none;">
   <h1>SU Pickup Soccer 2.0</h1>
   <p>Enter your name to access player ratings</p>
   <input id="username-input" type="text" placeholder="Your name..." maxlength="30" autocomplete="off"/>
   <button id="login-btn">Enter</button>
 </div>
-
 <div id="main">
   <div id="topbar">
     <div id="topbar-left">Hi, <span id="current-user-label"></span></div>
@@ -145,12 +111,10 @@
       <button id="logout-btn">Logout</button>
     </div>
   </div>
-
   <div id="players-panel">
     <div id="search-bar"><input id="search-input" type="text" placeholder="Search players..."/></div>
-    <div id="cards-grid"><div id="empty-state">No players yet. Ask the admin to add some.</div></div>
+    <div id="cards-grid"><div id="empty-state">Loading players...</div></div>
   </div>
-
   <div id="admin-panel">
     <h2>Admin panel</h2>
     <div id="admin-pass-wrap">
@@ -167,15 +131,11 @@
     </div>
   </div>
 </div>
-
 <div id="modal-overlay">
   <div id="modal">
     <div id="modal-header">
       <div id="modal-avatar"></div>
-      <div>
-        <div id="modal-title"></div>
-        <div id="modal-sub"></div>
-      </div>
+      <div><div id="modal-title"></div><div id="modal-sub"></div></div>
       <button id="modal-close">&#x2715;</button>
     </div>
     <div id="modal-radar-wrap"><canvas id="modal-radar" width="260" height="260"></canvas></div>
@@ -186,13 +146,18 @@
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbzksQctXWoKHXYW2RFBRZHrGK7O0JECxE5hSOYLv-QRqP8MO9SLLs52lm-gIeh2FDFd/exec';
 const SKILLS = ['Pace','Stamina','Power','Accuracy','Dribbling','Defending','Passing','Teamwork','Vision','Aggression'];
 const ADMIN_PASSWORD = 'supickup2025';
+const DEFAULT_PLAYERS = [
+  'Noah','Conor Scanlon','Jordan','Rodolph','Habeeb Salau','Atem','William Xu','Keea',
+  'Antony Attia','Yemi Uthman','Yasser','Aadil','Zack Sefrioui','Henry Demarest',
+  'Maximilian','Mwad S. Algadafi','John Alimi','Kourosh Akhavan','Samuel Desai','Saeed',
+  'JayS','Askar Musakunov','Bora','Ricardo','Matt','Abraham','Frida','Bijan Khalili',
+  'Yahaya Ndutu','Jan Skotheim','Hamido','Shaunak Joshi'
+].map(name => ({ id: 'p' + Math.random().toString(36).slice(2), name }));
 
 let state = { players: [], votes: {} };
 let currentUser = null;
@@ -205,48 +170,45 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-async function apiGet(key) {
-  const r = await fetch(`${API}?action=getAll`);
-  const d = await r.json();
-  const row = (d.data || []).find(r => r[0] === key);
-  return row ? JSON.parse(row[1]) : null;
+async function loadState() {
+  try {
+    const r = await fetch(`${API}?action=getAll`);
+    const d = await r.json();
+    const rows = d.data || [];
+    let hasPlayers = false;
+    rows.forEach(row => {
+      if (row[0] === 'players') { state.players = JSON.parse(row[1]); hasPlayers = true; }
+      if (row[0] === 'votes') state.votes = JSON.parse(row[1]);
+    });
+    if (!hasPlayers) {
+      state.players = DEFAULT_PLAYERS;
+      await apiSet('players', state.players);
+    }
+  } catch(e) { console.error('Load error', e); state.players = DEFAULT_PLAYERS; }
 }
 
 async function apiSet(key, value) {
   const url = `${API}?action=set&key=${encodeURIComponent(key)}&value=${encodeURIComponent(JSON.stringify(value))}`;
   await fetch(url);
 }
-
-async function loadState() {
-  try {
-    const r = await fetch(`${API}?action=getAll`);
-    const d = await r.json();
-    const rows = d.data || [];
-    rows.forEach(row => {
-      if (row[0] === 'players') state.players = JSON.parse(row[1]);
-      if (row[0] === 'votes') state.votes = JSON.parse(row[1]);
-    });
-  } catch(e) { console.error('Load error', e); }
+async function logVote(playerName, skillVotes) {
+  const url = `${API}?action=log&voter=${encodeURIComponent(currentUser)}&player=${encodeURIComponent(playerName)}&skills=${encodeURIComponent(JSON.stringify(skillVotes))}`;
+  await fetch(url);
 }
-
 async function savePlayers() { await apiSet('players', state.players); }
 async function saveVotes() { await apiSet('votes', state.votes); }
 
 function getInitials(name) {
   return name.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);
 }
-
 function getOverall(pid) {
   const pv = state.votes[pid];
   if (!pv || !Object.keys(pv).length) return null;
   let totals = SKILLS.map(()=>0), counts = SKILLS.map(()=>0);
-  Object.values(pv).forEach(sv => {
-    SKILLS.forEach((s,i) => { if (sv[s]!=null) { totals[i]+=sv[s]; counts[i]++; } });
-  });
+  Object.values(pv).forEach(sv => { SKILLS.forEach((s,i) => { if (sv[s]!=null) { totals[i]+=sv[s]; counts[i]++; } }); });
   const avgs = totals.map((t,i) => counts[i]>0?t/counts[i]:null).filter(v=>v!=null);
   return avgs.length ? Math.round(avgs.reduce((a,b)=>a+b,0)/avgs.length) : null;
 }
-
 function getSkillAvgs(pid) {
   const pv = state.votes[pid];
   if (!pv) return SKILLS.map(()=>0);
@@ -255,7 +217,6 @@ function getSkillAvgs(pid) {
     return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
   });
 }
-
 function getVoteCount(pid) { const pv=state.votes[pid]; return pv?Object.keys(pv).length:0; }
 function hasVoted(pid) { return !!(state.votes[pid] && state.votes[pid][currentUser]); }
 
@@ -327,8 +288,7 @@ function openModal(pid) {
   document.querySelectorAll('#skills-sliders input[type=range]').forEach(inp=>{
     inp.addEventListener('input',()=>{ document.getElementById('sv-'+inp.dataset.skill).textContent=inp.value; });
   });
-  const btn=document.getElementById('vote-btn');
-  const heading=document.getElementById('vote-heading');
+  const btn=document.getElementById('vote-btn'), heading=document.getElementById('vote-heading');
   if (voted) { btn.textContent='Already voted'; btn.disabled=true; heading.textContent='Your ratings'; }
   else if (currentUser===p.name) { btn.textContent="Can't rate yourself"; btn.disabled=true; heading.textContent='Player stats'; }
   else { btn.textContent='Submit ratings'; btn.disabled=false; heading.textContent='Rate this player'; }
@@ -345,6 +305,7 @@ document.getElementById('vote-btn').addEventListener('click', async()=>{
   state.votes[currentPlayerId][currentUser]=skillVotes;
   document.getElementById('vote-btn').textContent='Saving...'; document.getElementById('vote-btn').disabled=true;
   await saveVotes();
+  await logVote(p.name, skillVotes);
   showToast('Ratings saved!');
   document.getElementById('modal-overlay').classList.remove('open');
   renderCards(document.getElementById('search-input').value);
@@ -363,7 +324,6 @@ function login() {
 }
 document.getElementById('login-btn').addEventListener('click',login);
 document.getElementById('username-input').addEventListener('keydown',e=>{ if(e.key==='Enter')login(); });
-
 document.getElementById('logout-btn').addEventListener('click',()=>{
   currentUser=null; adminUnlocked=false;
   document.getElementById('login-screen').style.display='flex';
@@ -372,9 +332,7 @@ document.getElementById('logout-btn').addEventListener('click',()=>{
   document.getElementById('admin-content').style.display='none';
   document.getElementById('admin-pass-input').value='';
 });
-
 document.getElementById('search-input').addEventListener('input',e=>renderCards(e.target.value));
-
 document.getElementById('tab-players').addEventListener('click',()=>{
   document.getElementById('players-panel').style.display='block';
   document.getElementById('admin-panel').style.display='none';
@@ -388,18 +346,14 @@ document.getElementById('tab-admin').addEventListener('click',()=>{
   document.getElementById('tab-admin').classList.add('active');
   renderAdminList();
 });
-
 document.getElementById('admin-unlock-btn').addEventListener('click',()=>{
   if(document.getElementById('admin-pass-input').value===ADMIN_PASSWORD){
     adminUnlocked=true;
     document.getElementById('admin-content').style.display='block';
     document.getElementById('admin-locked-msg').style.display='none';
     renderAdminList();
-  } else {
-    document.getElementById('admin-locked-msg').textContent='Incorrect password. Try again.';
-  }
+  } else { document.getElementById('admin-locked-msg').textContent='Incorrect password. Try again.'; }
 });
-
 document.getElementById('add-player-btn').addEventListener('click',async()=>{
   const name=document.getElementById('new-player-input').value.trim();
   if(!name||!adminUnlocked)return;
@@ -414,7 +368,6 @@ document.getElementById('add-player-btn').addEventListener('click',async()=>{
   renderCards(document.getElementById('search-input').value);
 });
 document.getElementById('new-player-input').addEventListener('keydown',e=>{ if(e.key==='Enter')document.getElementById('add-player-btn').click(); });
-
 function renderAdminList() {
   if(!adminUnlocked)return;
   const list=document.getElementById('admin-player-list');
@@ -428,6 +381,7 @@ function renderAdminList() {
       state.players=state.players.filter(x=>x.id!==p.id);
       delete state.votes[p.id];
       await savePlayers(); await saveVotes();
+  await logVote(p.name, skillVotes);
       showToast(`${p.name} removed.`);
       renderAdminList();
       renderCards(document.getElementById('search-input').value);
@@ -435,7 +389,6 @@ function renderAdminList() {
     list.appendChild(row);
   });
 }
-
 loadState().then(()=>{
   document.getElementById('loading-overlay').style.display='none';
   document.getElementById('login-screen').style.display='flex';
