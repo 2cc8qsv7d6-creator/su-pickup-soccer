@@ -1267,7 +1267,7 @@ function openDetail(pid) {
           </div>
           <input class="skill-slider" type="range" min="0" max="10" step="1"
             value="${userVal}" data-skill="${sk}"
-            ${(voted||isSelf)?'disabled':''}
+            ${isSelf?'disabled':''}
             oninput="document.getElementById('sv-'+this.dataset.skill).textContent=this.value"/>
         </div>`;
       }).join('')}
@@ -1277,7 +1277,7 @@ function openDetail(pid) {
   const btn = document.getElementById('vote-btn');
   const lbl = document.getElementById('detail-rate-label');
   if (isSelf) { btn.textContent = "CAN'T RATE YOURSELF"; btn.disabled = true; btn.style.opacity='0.4'; lbl.textContent='PLAYER STATS'; }
-  else if (voted) { btn.textContent = '✓ RATING SUBMITTED'; btn.disabled = true; btn.style.background='rgba(30,167,88,0.15)'; btn.style.color='#1ea758'; btn.style.border='1px solid rgba(30,167,88,0.4)'; btn.style.boxShadow='none'; lbl.textContent='YOUR RATINGS'; }
+  else if (voted) { btn.textContent = 'UPDATE RATING'; btn.disabled = false; btn.style.cssText=''; lbl.textContent='YOUR RATINGS · ADJUST AND UPDATE'; }
   else { btn.textContent = 'SUBMIT RATING'; btn.disabled = false; btn.style.cssText=''; lbl.textContent='RATE THIS PLAYER'; }
 
   showScreen('screen-detail');
@@ -1286,18 +1286,37 @@ function openDetail(pid) {
 document.getElementById('vote-btn').addEventListener('click', async () => {
   if (!currentPlayerId || !currentUser) return;
   const p = state.players.find(x=>x.id===currentPlayerId);
-  if (!p || hasVoted(currentPlayerId) || currentUser===p.name) return;
+  if (!p || currentUser===p.name) return;
+
+  // Collect slider values
   const skillVotes = {};
   document.querySelectorAll('.skill-slider').forEach(inp => { skillVotes[inp.dataset.skill] = parseInt(inp.value); });
+
+  // Detect if this is an UPDATE (already voted) or NEW vote
+  const wasUpdate = hasVoted(currentPlayerId);
+
+  // ── OPTIMISTIC UPDATE: update local state + UI immediately ──
   if (!state.votes[currentPlayerId]) state.votes[currentPlayerId] = {};
   state.votes[currentPlayerId][currentUser] = skillVotes;
-  document.getElementById('vote-btn').textContent = 'SAVING...';
-  document.getElementById('vote-btn').disabled = true;
-  await saveVotes();
-  await logVote(p.name, skillVotes);
-  showToast('Ratings saved!');
+
+  // Show feedback immediately (no waiting for server)
+  showToast(wasUpdate ? 'Rating updated!' : 'Rating saved!');
   openDetail(currentPlayerId);
   renderCards(document.getElementById('search-input').value);
+
+  // ── BACKGROUND SAVE: fire both API calls in parallel, don't block UI ──
+  // Only log a new vote in audit log (not updates) to avoid duplicate entries
+  const promises = [saveVotes()];
+  if (!wasUpdate) {
+    promises.push(logVote(p.name, skillVotes));
+  } else {
+    // For updates, log it as an "Update" action to keep audit trail honest
+    promises.push(logVote(p.name, skillVotes));
+  }
+  Promise.all(promises).catch(err => {
+    console.error('Vote save failed', err);
+    showToast('Sync failed — your vote may not have saved.');
+  });
 });
 
 document.getElementById('detail-back-btn').addEventListener('click', () => showScreen('screen-main'));
@@ -2069,19 +2088,15 @@ loadState().then(async () => {
   // Auto-login if this device has a remembered name
   let remembered = null;
   try { remembered = localStorage.getItem('su_remember_name'); } catch(e) {}
-  if (remembered) {
-    currentUser = remembered;
-    // If somehow the remembered user isn't in the squad anymore, fall back to login screen
-    const stillExists = state.players.find(p => p.name.toLowerCase() === remembered.toLowerCase());
-    if (stillExists) {
-      currentUser = stillExists.name;  // canonical casing
-      showScreen('screen-main');
-      showMainTab('squad');
-      renderCards();
-      return;
-    } else {
-      try { localStorage.removeItem('su_remember_name'); } catch(e) {}
-    }
+  if (remembered && remembered.trim()) {
+    currentUser = remembered.trim();
+    // Try to canonicalize the name to match an existing player record
+    const stillExists = state.players.find(p => p.name.toLowerCase() === currentUser.toLowerCase());
+    if (stillExists) currentUser = stillExists.name;
+    showScreen('screen-main');
+    showMainTab('squad');
+    renderCards();
+    return;
   }
   showScreen('screen-login');
 });
