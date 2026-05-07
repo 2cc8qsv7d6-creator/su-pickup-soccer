@@ -181,12 +181,99 @@ body {
 #search-input::placeholder { color: var(--text3); }
 #sort-row { display: flex; gap: 4px; margin-top: 8px; }
 .sort-btn {
-  flex: 1; padding: 7px; border-radius: 6px;
+  padding: 6px 12px; border-radius: 6px;
   background: var(--surface); border: 1px solid var(--border);
   color: var(--text2); font-family: var(--font-display);
-  font-size: 10px; font-weight: 900; letter-spacing: 0.8px; cursor: pointer; transition: all 0.12s;
+  font-size: 11px; font-weight: 900; letter-spacing: 0.8px; cursor: pointer; transition: all 0.12s;
 }
 .sort-btn.active { background: var(--cardinal); border-color: var(--cardinal); color: #fff; }
+
+/* SQUAD: TOP RATED + FULL ROSTER */
+.section-divider {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 14px 8px; flex-shrink: 0;
+}
+.section-divider-label {
+  font-family: var(--font-display); font-size: 12px; font-weight: 900;
+  letter-spacing: 1.5px; color: var(--text);
+}
+.section-divider-label.top-rated { color: rgba(255,216,155,0.9); }
+.sort-btn-group { display: flex; gap: 4px; }
+#top-rated-scroll {
+  display: flex; gap: 8px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; padding: 4px 14px 14px;
+  scrollbar-width: none;
+}
+#top-rated-scroll::-webkit-scrollbar { display: none; }
+.top-card-wrap {
+  flex-shrink: 0; width: 158px;
+  cursor: pointer; transition: transform 0.12s;
+}
+.top-card-wrap:active { transform: scale(0.97); }
+#roster-list { padding: 0 14px calc(40px + var(--safe-bottom)); }
+.roster-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  margin-bottom: 8px; cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.roster-row:active { background: rgba(255,255,255,0.04); }
+.roster-rank {
+  font-family: var(--font-display); font-size: 12px; font-weight: 900;
+  color: var(--text3); width: 30px; text-align: left; flex-shrink: 0;
+}
+.roster-avatar {
+  width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(255,216,155,0.06);
+  border: 1px solid rgba(255,216,155,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 12px; font-weight: 900;
+  color: rgba(255,216,155,0.5); overflow: hidden;
+}
+.roster-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.roster-info { flex: 1; min-width: 0; }
+.roster-line1 { display: flex; align-items: center; gap: 7px; }
+.roster-name {
+  font-family: var(--font-ui); font-size: 15px; font-weight: 700;
+  color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.roster-pos {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--text2);
+}
+.roster-flag { font-size: 14px; }
+.roster-stats {
+  display: flex; gap: 10px; margin-top: 5px;
+  font-family: var(--font-display);
+}
+.roster-stat {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 22px;
+}
+.roster-stat-key {
+  font-size: 9px; font-weight: 900; letter-spacing: 0.6px;
+  color: var(--text3); margin-bottom: 1px;
+}
+.roster-stat-val {
+  font-size: 12px; font-weight: 900;
+}
+.roster-motto {
+  font-family: var(--font-ui); font-size: 11px; font-style: italic;
+  color: rgba(255,216,155,0.75); margin-top: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 500;
+}
+.roster-right { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.roster-ovr {
+  font-family: var(--font-display); font-size: 26px; font-weight: 900;
+  color: var(--gold); line-height: 1;
+}
+.roster-ovr.na { color: var(--text3); font-size: 18px; font-weight: 600; }
+.roster-votes {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text3); margin-top: 2px;
+}
 
 /* ── FIFA CARD ── */
 .card-wrap { cursor: pointer; transition: transform 0.12s; }
@@ -579,13 +666,21 @@ body {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="rgba(255,255,255,0.5)" stroke-width="2"/><path d="m20 20-3-3" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/></svg>
         <input id="search-input" placeholder="Search players..."/>
       </div>
-      <div id="sort-row">
-        <button class="sort-btn active" data-sort="ovr">TOP RATED</button>
-        <button class="sort-btn" data-sort="new">A–Z</button>
-      </div>
     </div>
     <div class="scroll-body">
-      <div id="cards-grid"><div class="empty-state">Loading players...</div></div>
+      <div class="section-divider">
+        <div class="section-divider-label top-rated">TOP RATED ★</div>
+      </div>
+      <div id="top-rated-scroll"></div>
+      <div class="section-divider">
+        <div class="section-divider-label">FULL ROSTER</div>
+        <div class="sort-btn-group">
+          <button class="sort-btn active" data-sort="ovr">OVR</button>
+          <button class="sort-btn" data-sort="votes">VOTES</button>
+          <button class="sort-btn" data-sort="az">A–Z</button>
+        </div>
+      </div>
+      <div id="roster-list"><div class="empty-state">Loading players...</div></div>
     </div>
   </div>
 
@@ -973,64 +1068,127 @@ async function savePlayers() { await apiSet('players',state.players); }
 async function saveVotes() { await apiSet('votes',state.votes); }
 
 // ─── RENDER CARDS ───────────────────────────────────────────────
+// Helper: build a full FIFA card element (TOP RATED horizontal scroll)
+function buildFifaCard(p) {
+  const overall = getOverall(p.id);
+  const avgs = getSkillAvgs(p.id);
+  const votes = getVoteCount(p.id);
+  const cats = Object.keys(CATEGORY_MAP);
+  const wrap = document.createElement('div');
+  wrap.className = 'top-card-wrap';
+  wrap.innerHTML = `
+    <div class="fifa-card">
+      <div class="card-inner-border"></div>
+      <div class="card-top">
+        <div class="card-ovr-col">
+          <div class="card-ovr">${overall==null?'--':overall}</div>
+          <div class="card-pos">${p.pos||'--'}</div>
+          <div class="card-divider"></div>
+          <div class="card-flag">${p.flag||'🌍'}</div>
+        </div>
+        <div class="card-photo">
+          <div class="card-photo-inner">
+            ${p.photo ? `<img src="${p.photo}" alt="${p.name}"/>` : `<span class="card-photo-initials">${initials(p.name)}</span>`}
+          </div>
+        </div>
+      </div>
+      <div class="card-name">${p.name}</div>
+      ${(state.profiles[p.name] && state.profiles[p.name].motto) ? `<div class="card-motto">"${state.profiles[p.name].motto}"</div>` : ''}
+      ${overall != null ? `
+      <div class="card-stats">
+        ${cats.slice(0,3).map(k=>{
+          const v=getCatVal(avgs,k);
+          return `<div class="card-stat-row">
+            <span class="card-stat-val" style="color:${statColor(v)}">${v}</span>
+            <span class="card-stat-key">${k}</span>
+            <div class="card-stat-bar"><div class="card-stat-fill" style="width:${v}%;background:${barBg(v)}"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="card-meta">
+        <span>${p.age&&p.age!='--'?p.age+'y':''}</span>
+        ${p.age&&p.age!='--'?'<span style=\"opacity:0.4\">·</span>':''}
+        <span>${p.ht&&p.ht!='--'?p.ht:''}</span>
+        ${p.ht&&p.ht!='--'?'<span style=\"opacity:0.4\">·</span>':''}
+        <span>${p.foot&&p.foot!='--'?p.foot+'-foot':''}</span>
+      </div>` : `<div class="card-na">--</div>`}
+      <div class="card-votes">${votes}v</div>
+    </div>`;
+  wrap.addEventListener('click', ()=>openDetail(p.id));
+  return wrap;
+}
+
+// Helper: build a list row (FULL ROSTER)
+function buildRosterRow(p, rank) {
+  const overall = getOverall(p.id);
+  const avgs = getSkillAvgs(p.id);
+  const votes = getVoteCount(p.id);
+  const cats = Object.keys(CATEGORY_MAP);
+  const motto = state.profiles[p.name] && state.profiles[p.name].motto;
+  const row = document.createElement('div');
+  row.className = 'roster-row';
+  row.innerHTML = `
+    <div class="roster-rank">#${rank}</div>
+    <div class="roster-avatar">${p.photo ? `<img src="${p.photo}" alt="${p.name}"/>` : initials(p.name)}</div>
+    <div class="roster-info">
+      <div class="roster-line1">
+        <span class="roster-name">${p.name}</span>
+        <span class="roster-pos">· ${p.pos||'--'}</span>
+        <span class="roster-flag">${p.flag||''}</span>
+      </div>
+      ${overall!=null ? `<div class="roster-stats">
+        ${cats.slice(0,6).map(k=>{
+          const v=getCatVal(avgs,k);
+          return `<div class="roster-stat">
+            <span class="roster-stat-key">${k}</span>
+            <span class="roster-stat-val" style="color:${statColor(v)}">${v}</span>
+          </div>`;
+        }).join('')}
+      </div>` : '<div class="roster-stats" style="color:var(--text3);font-weight:500;font-size:11px;">No ratings yet</div>'}
+      ${motto ? `<div class="roster-motto">"${motto}"</div>` : ''}
+    </div>
+    <div class="roster-right">
+      <div class="roster-ovr ${overall==null?'na':''}">${overall==null?'--':overall}</div>
+      <div class="roster-votes">${votes}v</div>
+    </div>
+  `;
+  row.addEventListener('click', ()=>openDetail(p.id));
+  return row;
+}
+
 function renderCards(filter='') {
-  const grid = document.getElementById('cards-grid');
-  let list = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
-  if (sortMode==='ovr') list.sort((a,b)=>(getOverall(b.id)||0)-(getOverall(a.id)||0));
-  else list.sort((a,b)=>a.name.localeCompare(b.name));
-
   document.getElementById('squad-player-count').textContent = state.players.length + ' PLAYERS';
+  const list = state.players.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase()));
 
-  if (!list.length) { grid.innerHTML='<div class="empty-state">No players found.</div>'; return; }
-  grid.innerHTML = '';
-  list.forEach(p => {
-    const overall = getOverall(p.id);
-    const avgs = getSkillAvgs(p.id);
-    const votes = getVoteCount(p.id);
-    const cats = Object.keys(CATEGORY_MAP);
-    const wrap = document.createElement('div');
-    wrap.className = 'card-wrap';
-    wrap.innerHTML = `
-      <div class="fifa-card">
-        <div class="card-inner-border"></div>
-        <div class="card-top">
-          <div class="card-ovr-col">
-            <div class="card-ovr">${overall??'--'}</div>
-            <div class="card-pos">${p.pos||'--'}</div>
-            <div class="card-divider"></div>
-            <div class="card-flag">${p.flag||'🌍'}</div>
-          </div>
-          <div class="card-photo">
-            <div class="card-photo-inner">
-              ${p.photo ? `<img src="${p.photo}" alt="${p.name}"/>` : `<span class="card-photo-initials">${initials(p.name)}</span>`}
-            </div>
-          </div>
-        </div>
-        <div class="card-name">${p.name}</div>
-        ${(state.profiles[p.name] && state.profiles[p.name].motto) ? `<div class="card-motto">"${state.profiles[p.name].motto}"</div>` : ''}
-        ${overall != null ? `
-        <div class="card-stats">
-          ${cats.map(k=>{
-            const v=getCatVal(avgs,k);
-            return `<div class="card-stat-row">
-              <span class="card-stat-val" style="color:${statColor(v)}">${v}</span>
-              <span class="card-stat-key">${k}</span>
-              <div class="card-stat-bar"><div class="card-stat-fill" style="width:${v}%;background:${barBg(v)}"></div></div>
-            </div>`;
-          }).join('')}
-        </div>
-        <div class="card-meta">
-          <span>${p.age!='--'?p.age+'y':''}</span>
-          ${p.age!='--'?'<span style="opacity:0.4">·</span>':''}
-          <span>${p.ht!='--'?p.ht:''}</span>
-          ${p.ht!='--'?'<span style="opacity:0.4">·</span>':''}
-          <span>${p.foot&&p.foot!='--'?p.foot+'-foot':''}</span>
-        </div>` : `<div class="card-na">--</div>`}
-        <div class="card-votes">${votes}v</div>
-      </div>`;
-    wrap.addEventListener('click', ()=>openDetail(p.id));
-    grid.appendChild(wrap);
-  });
+  // TOP RATED: top 4 rated, horizontal scroll
+  const topEl = document.getElementById('top-rated-scroll');
+  topEl.innerHTML = '';
+  const topRated = [...list]
+    .filter(p => getOverall(p.id) != null)
+    .sort((a,b) => (getOverall(b.id)||0) - (getOverall(a.id)||0))
+    .slice(0, 4);
+  if (topRated.length) {
+    topRated.forEach(p => topEl.appendChild(buildFifaCard(p)));
+  } else {
+    topEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px 14px;">No rated players yet — start voting!</div>';
+  }
+
+  // FULL ROSTER: list rows, sortable
+  const sorted = [...list];
+  if (sortMode === 'ovr') {
+    sorted.sort((a,b) => (getOverall(b.id)||0) - (getOverall(a.id)||0));
+  } else if (sortMode === 'votes') {
+    sorted.sort((a,b) => getVoteCount(b.id) - getVoteCount(a.id));
+  } else {
+    sorted.sort((a,b) => a.name.localeCompare(b.name));
+  }
+  const rosterEl = document.getElementById('roster-list');
+  rosterEl.innerHTML = '';
+  if (!sorted.length) {
+    rosterEl.innerHTML = '<div class="empty-state">No players found.</div>';
+    return;
+  }
+  sorted.forEach((p, i) => rosterEl.appendChild(buildRosterRow(p, i + 1)));
 }
 
 // ─── PLAYER DETAIL ──────────────────────────────────────────────
