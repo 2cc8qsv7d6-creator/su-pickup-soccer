@@ -1066,6 +1066,7 @@ async function logVote(playerName,skillVotes) {
 }
 async function savePlayers() { await apiSet('players',state.players); }
 async function saveVotes() { await apiSet('votes',state.votes); }
+async function saveProfiles() { await apiSet('profiles', state.profiles||{}); }
 
 // ─── RENDER CARDS ───────────────────────────────────────────────
 // Helper: build a full FIFA card element (TOP RATED horizontal scroll)
@@ -1920,10 +1921,26 @@ function renderAdminList() {
     row.querySelector('[data-trigger]')?.addEventListener('click', ()=>{ confirmRemoveId=p.id; renderAdminList(); });
     row.querySelector('[data-cancel]')?.addEventListener('click', ()=>{ confirmRemoveId=null; renderAdminList(); });
     row.querySelector('[data-id]')?.addEventListener('click', async ()=>{
+      const removedName = p.name;
+      // 1. Remove from players list
       state.players = state.players.filter(x=>x.id!==p.id);
+      // 2. Remove votes ABOUT this player (other people's ratings of them)
       delete state.votes[p.id];
-      await savePlayers(); await saveVotes();
-      showToast(p.name+' removed.');
+      // 3. Remove votes BY this player (their ratings of everyone else)
+      Object.keys(state.votes).forEach(playerId => {
+        if (state.votes[playerId] && state.votes[playerId][removedName]) {
+          delete state.votes[playerId][removedName];
+        }
+      });
+      // 4. Remove their profile (motto, photo, age, etc.)
+      if (state.profiles && state.profiles[removedName]) {
+        delete state.profiles[removedName];
+      }
+      // Save all three to Google Sheets
+      await savePlayers();
+      await saveVotes();
+      await saveProfiles();
+      showToast(removedName + ' fully removed.');
       confirmRemoveId=null; renderAdminList(); renderCards();
     });
     list.appendChild(row);
