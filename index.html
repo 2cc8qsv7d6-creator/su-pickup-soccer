@@ -238,11 +238,19 @@ body {
   color: rgba(42,26,2,0.5);
 }
 .card-name {
-  font-family: var(--font-display); font-size: 11px; font-weight: 900;
+  font-family: var(--font-display); font-size: 14px; font-weight: 900;
   letter-spacing: 0.3px; color: #2a1a02; text-transform: uppercase;
   text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin: 6px 0 4px; position: relative; z-index: 2;
-  border-top: 0.8px solid rgba(0,0,0,0.3); padding-top: 5px;
+  margin: 6px 0 3px; position: relative; z-index: 2;
+  border-top: 0.8px solid rgba(0,0,0,0.3); padding-top: 6px;
+}
+.card-motto {
+  font-family: var(--font-ui); font-size: 11px; font-style: italic; font-weight: 600;
+  color: rgba(42,26,2,0.85); text-align: center;
+  line-height: 1.3; padding: 0 4px; margin: 2px 0 5px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; text-overflow: ellipsis;
+  position: relative; z-index: 2; min-height: 26px;
 }
 .card-stats {
   display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 3px;
@@ -323,12 +331,12 @@ body {
 .cat-key { font-family: var(--font-display); font-size: 9px; font-weight: 900; letter-spacing: 1.5px; color: var(--text3); }
 .cat-label { font-family: var(--font-display); font-size: 11px; font-weight: 900; color: var(--text); }
 .cat-val { font-family: var(--font-display); font-size: 26px; font-weight: 900; line-height: 1; }
-.skill-row-detail { margin-bottom: 8px; }
+.skill-row-detail { margin-bottom: 12px; }
 .skill-row-detail:last-child { margin-bottom: 0; }
-.skill-row-top { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 3px; }
-.skill-name { color: var(--text2); font-weight: 500; }
-.skill-val-label { font-family: var(--font-display); font-weight: 900; color: var(--gold); }
-.skill-slider { width: 100%; height: 4px; accent-color: var(--gold); cursor: pointer; }
+.skill-row-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; align-items: center; }
+.skill-name { color: var(--text); font-weight: 600; font-size: 13px; letter-spacing: 0.2px; }
+.skill-val-label { font-family: var(--font-display); font-weight: 900; color: #4a9eff; font-size: 16px; }
+.skill-slider { width: 100%; height: 6px; accent-color: #4a9eff; cursor: pointer; }
 .skill-slider:disabled { cursor: default; opacity: 0.6; }
 
 /* ── LEADERBOARD ── */
@@ -999,6 +1007,7 @@ function renderCards(filter='') {
           </div>
         </div>
         <div class="card-name">${p.name}</div>
+        ${(state.profiles[p.name] && state.profiles[p.name].motto) ? `<div class="card-motto">"${state.profiles[p.name].motto}"</div>` : ''}
         ${overall != null ? `
         <div class="card-stats">
           ${cats.map(k=>{
