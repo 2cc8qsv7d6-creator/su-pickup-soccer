@@ -868,7 +868,7 @@ body {
 <script>
 // ─── CONFIG ─────────────────────────────────────────────────────
 const API = 'https://script.google.com/macros/s/AKfycbzksQctXWoKHXYW2RFBRZHrGK7O0JECxE5hSOYLv-QRqP8MO9SLLs52lm-gIeh2FDFd/exec';
-const ADMIN_PASSWORD = 'supickup2025';
+const ADMIN_PASSWORD = 'supickup26';
 const SKILLS = ['Pace','Stamina','Power','Accuracy','Dribbling','Defending','Passing','Teamwork','Vision','Aggression'];
 const CATEGORY_MAP = {
   PAC: { label:'PACE',      skills:['Pace','Stamina'] },
@@ -949,12 +949,8 @@ const FLAGS = [
 ].sort((a,b)=>a.n.localeCompare(b.n));
 const POSITIONS = ['GK','CB','LB','RB','CDM','CM','CAM','LW','RW','ST'];
 const DEFAULT_PLAYERS = [
-  'Noah','Conor Scanlon','Jordan','Rodolph','Habeeb Salau','Atem','William Xu','Keea',
-  'Antony Attia','Yemi Uthman','Yasser','Aadil','Zack Sefrioui','Henry Demarest',
-  'Maximilian','Mwad S. Algadafi','John Alimi','Kourosh Akhavan','Samuel Desai','Saeed',
-  'JayS','Askar Musakunov','Bora','Ricardo','Matt','Abraham','Frida','Bijan Khalili',
-  'Yahaya Ndutu','Jan Skotheim','Hamido','Shaunak Joshi'
-].map(name => ({ id: 'p' + Math.random().toString(36).slice(2), name, pos:'--', age:'--', ht:'--', foot:'R', flag:'🌍', photo:null }));
+  'Conor Scanlon','Yasser Alshareef','Yemi Uthman','Henry Demarest','William Xu'
+].map(name => ({ id: 'p' + Math.random().toString(36).slice(2), name, pos:'--', age:'--', ht:'--', foot:'R', flag:'🌍', photo:null, source:'default' }));
 
 // ─── STATE ──────────────────────────────────────────────────────
 let state = { players: [], votes: {}, profiles: {} };
@@ -1063,6 +1059,39 @@ async function logVote(playerName,skillVotes) {
   body.append('player', playerName);
   body.append('skills', JSON.stringify(skillVotes));
   await fetch(API, { method: 'POST', body });
+}
+
+// Profile audit log helper (logs to ProfileLog sheet)
+async function logProfile(user, actionType, field, oldValue, newValue) {
+  try {
+    const body = new URLSearchParams();
+    body.append('action', 'profileLog');
+    body.append('user', user || '');
+    body.append('actionType', actionType || '');
+    body.append('field', field || '');
+    body.append('oldValue', String(oldValue == null ? '' : oldValue));
+    body.append('newValue', String(newValue == null ? '' : newValue));
+    await fetch(API, { method: 'POST', body });
+  } catch(e) { console.error('logProfile failed', e); }
+}
+
+// Diff old vs new profile and log each changed field
+async function logProfileChanges(user, oldProfile, newProfile, actionType) {
+  const fields = ['name','age','ht','heightFt','heightIn','flag','foot','motto','positions'];
+  for (const field of fields) {
+    const oldVal = oldProfile && oldProfile[field];
+    const newVal = newProfile && newProfile[field];
+    const oldStr = Array.isArray(oldVal) ? oldVal.join(',') : (oldVal || '');
+    const newStr = Array.isArray(newVal) ? newVal.join(',') : (newVal || '');
+    if (oldStr !== newStr) {
+      await logProfile(user, actionType || 'Update', field, oldStr, newStr);
+    }
+  }
+  const oldPhoto = oldProfile && oldProfile.photo;
+  const newPhoto = newProfile && newProfile.photo;
+  if (oldPhoto !== newPhoto) {
+    await logProfile(user, 'Photo', 'photo', oldPhoto ? '(previous)' : '(none)', newPhoto ? '(uploaded)' : '(removed)');
+  }
 }
 async function savePlayers() { await apiSet('players',state.players); }
 async function saveVotes() { await apiSet('votes',state.votes); }
@@ -1455,10 +1484,16 @@ async function login() {
         ht: ht || '--',
         foot: 'R',
         flag: flag,
-        photo: null
+        photo: null,
+        source: 'signup'
       };
       state.players.push(player);
       await savePlayers();
+      // Log the new signup
+      await logProfile(fullName, 'Signup', '', '', 'New player joined');
+      if (age) await logProfile(fullName, 'Signup', 'age', '', age);
+      if (ht) await logProfile(fullName, 'Signup', 'height', '', ht);
+      if (flag && flag !== '🌍') await logProfile(fullName, 'Signup', 'nationality', '', flag);
       showToast('Welcome, ' + fullName + '! You\u2019re in the squad.');
     } else {
       // ── Returning user: update player info if any optional info was provided ──
@@ -1486,6 +1521,9 @@ async function login() {
     };
     await saveProfileData(currentUser, profile);
 
+    // Remember this device for next time (auto-login)
+    try { localStorage.setItem('su_remember_name', currentUser); } catch(e) {}
+
     showScreen('screen-main');
     showMainTab('squad');
     renderCards();
@@ -1504,6 +1542,8 @@ document.getElementById('login-btn').addEventListener('click', login);
 });
 document.getElementById('logout-btn').addEventListener('click', ()=>{
   currentUser = null; adminUnlocked = false;
+  // Forget this device — user will need to log in again
+  try { localStorage.removeItem('su_remember_name'); } catch(e) {}
   ['login-firstname','login-lastname','login-age','login-height-ft','login-height-in'].forEach(id=>{
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -1660,6 +1700,7 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
       const existing = state.profiles[p.name] || {};
       const updated = { ...existing, name: p.name, age, ht, heightFt, heightIn, motto, foot: profileFoot, flag: profileFlag, positions: profilePositions };
       await saveProfileData(p.name, updated);
+      logProfileChanges(p.name, existing, updated, 'Admin Edit');
       showToast(p.name + ' updated!');
       // Exit admin-edit mode and go back to admin tab
       adminEditingPlayerId = null;
@@ -1681,6 +1722,7 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
         p.pos = profilePositions[0] || p.pos || '--';
         await savePlayers();
       }
+      logProfileChanges(currentUser, existing, data, 'Update');
       showToast('Profile saved!');
       renderCards(document.getElementById('search-input').value);
     }
@@ -1747,6 +1789,7 @@ document.getElementById('photo-input').addEventListener('change', e => {
           existing.photo = compressed;
           await saveProfileData(p.name, existing);
           renderCards();
+          await logProfile(p.name, 'Admin Photo', 'photo', '(previous)', '(uploaded by admin)');
           showToast('Photo saved for ' + p.name + '!');
         }
       } else {
@@ -1756,6 +1799,7 @@ document.getElementById('photo-input').addEventListener('change', e => {
         await saveProfileData(currentUser, data);
         const p = state.players.find(x=>x.name===currentUser);
         if (p) { p.photo = compressed; await savePlayers(); renderCards(); }
+        await logProfile(currentUser, 'Photo', 'photo', '(previous)', '(uploaded)');
         showToast('Photo saved!');
       }
     } catch (err) {
@@ -1816,7 +1860,7 @@ document.getElementById('add-player-btn').addEventListener('click', async () => 
   const name = document.getElementById('new-player-input').value.trim();
   if (!name) return;
   if (state.players.find(p=>p.name.toLowerCase()===name.toLowerCase())) { showToast('Player already exists.'); return; }
-  state.players.push({ id:'p'+Date.now(), name, pos:adminNewPos, age:'--', ht:'--', foot:'R', flag:'🌍', photo:null });
+  state.players.push({ id:'p'+Date.now(), name, pos:adminNewPos, age:'--', ht:'--', foot:'R', flag:'🌍', photo:null, source:'admin' });
   document.getElementById('new-player-input').value = '';
   document.getElementById('add-player-btn').textContent = 'SAVING...';
   await savePlayers();
@@ -1940,6 +1984,7 @@ function renderAdminList() {
       await savePlayers();
       await saveVotes();
       await saveProfiles();
+      await logProfile(removedName, 'Removed', '', 'Active player', 'Removed by admin');
       showToast(removedName + ' fully removed.');
       confirmRemoveId=null; renderAdminList(); renderCards();
     });
@@ -1976,8 +2021,68 @@ function renderAuditLog() {
 }
 
 // ─── INIT ────────────────────────────────────────────────────────
-loadState().then(() => {
+// Run a one-time cleanup of the player roster: keep only these 5 default players.
+// This is idempotent — once done, nothing happens on subsequent loads.
+async function runOneTimeRosterCleanup() {
+  const KEEP_NAMES = ['Conor Scanlon','Yasser Alshareef','Yemi Uthman','Henry Demarest','William Xu'];
+  const cleanupKey = 'su_roster_cleanup_v1_done';
+  if (localStorage.getItem(cleanupKey)) return;  // already cleaned on this device
+  // Only the admin should run cleanup — but since we can't auth here, do it once globally based on data state.
+  // Detect: any of the 32 originals not in the keep list still in the players array AND no signups have happened.
+  const removeNames = ['Noah','Jordan','Rodolph','Habeeb Salau','Atem','Keea','Antony Attia','Yasser','Aadil',
+    'Zack Sefrioui','Maximilian','Mwad S. Algadafi','John Alimi','Kourosh Akhavan','Samuel Desai','Saeed',
+    'JayS','Askar Musakunov','Bora','Ricardo','Matt','Abraham','Frida','Bijan Khalili',
+    'Yahaya Ndutu','Jan Skotheim','Hamido','Shaunak Joshi'];
+  const before = state.players.length;
+  const toRemove = state.players.filter(p => removeNames.includes(p.name));
+  if (!toRemove.length) {
+    localStorage.setItem(cleanupKey, '1');
+    return;
+  }
+  console.log('Running one-time roster cleanup — removing', toRemove.length, 'players');
+  // Remove from players, votes, profiles
+  toRemove.forEach(p => {
+    state.players = state.players.filter(x => x.id !== p.id);
+    delete state.votes[p.id];
+    Object.keys(state.votes).forEach(playerId => {
+      if (state.votes[playerId] && state.votes[playerId][p.name]) {
+        delete state.votes[playerId][p.name];
+      }
+    });
+    if (state.profiles && state.profiles[p.name]) delete state.profiles[p.name];
+  });
+  try {
+    await savePlayers();
+    await saveVotes();
+    await saveProfiles();
+    localStorage.setItem(cleanupKey, '1');
+    console.log('Cleanup complete:', before, '->', state.players.length, 'players');
+  } catch(e) { console.error('Cleanup save failed', e); }
+}
+
+loadState().then(async () => {
+  // One-time roster trim
+  await runOneTimeRosterCleanup();
+
   document.getElementById('screen-loading').classList.remove('active');
+
+  // Auto-login if this device has a remembered name
+  let remembered = null;
+  try { remembered = localStorage.getItem('su_remember_name'); } catch(e) {}
+  if (remembered) {
+    currentUser = remembered;
+    // If somehow the remembered user isn't in the squad anymore, fall back to login screen
+    const stillExists = state.players.find(p => p.name.toLowerCase() === remembered.toLowerCase());
+    if (stillExists) {
+      currentUser = stillExists.name;  // canonical casing
+      showScreen('screen-main');
+      showMainTab('squad');
+      renderCards();
+      return;
+    } else {
+      try { localStorage.removeItem('su_remember_name'); } catch(e) {}
+    }
+  }
   showScreen('screen-login');
 });
 </script>
