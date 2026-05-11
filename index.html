@@ -869,16 +869,16 @@ body {
 // ─── CONFIG ─────────────────────────────────────────────────────
 const API = 'https://script.google.com/macros/s/AKfycbzksQctXWoKHXYW2RFBRZHrGK7O0JECxE5hSOYLv-QRqP8MO9SLLs52lm-gIeh2FDFd/exec';
 const ADMIN_PASSWORD = 'supickup26';
-const SKILLS = ['Pace','Stamina','Power','Accuracy','Dribbling','Flair','Defending','Aggression','Passing','Vision','Teamwork','Intangibles','Work Rate'];
+const SKILLS = ['Pace','Stamina','Power','Accuracy','Dribbling','Defending','Passing','Teamwork','Vision','Aggression'];
 const CATEGORY_MAP = {
-  PHY: { label:'PHYSICALS',  skills:['Pace','Stamina'] },
-  SHO: { label:'SHOOTING',   skills:['Power','Accuracy'] },
-  PAS: { label:'PASSING',    skills:['Passing','Vision'] },
-  DRI: { label:'DRIBBLING',  skills:['Dribbling','Flair'] },
-  DEF: { label:'DEFENDING',  skills:['Defending','Aggression'] },
-  GIQ: { label:'GAME IQ',    skills:['Teamwork','Intangibles','Work Rate'] },
+  PAC: { label:'PACE',      skills:['Pace','Stamina'] },
+  SHO: { label:'SHOOTING',  skills:['Power','Accuracy'] },
+  PAS: { label:'PASSING',   skills:['Passing','Vision'] },
+  DRI: { label:'DRIBBLING', skills:['Dribbling'] },
+  DEF: { label:'DEFENDING', skills:['Defending','Teamwork'] },
+  PHY: { label:'PHYSICAL',  skills:['Aggression'] },
 };
-const LB_CATS = ['OVR','PHY','SHO','PAS','DRI','DEF','GIQ'];
+const LB_CATS = ['OVR','PAC','SHO','PAS','DRI','DEF','PHY'];
 const FLAGS = [
   {c:'🇦🇫',n:'Afghanistan'},{c:'🇦🇱',n:'Albania'},{c:'🇩🇿',n:'Algeria'},
   {c:'🇦🇩',n:'Andorra'},{c:'🇦🇴',n:'Angola'},{c:'🇦🇬',n:'Antigua & Barbuda'},
@@ -1040,7 +1040,14 @@ async function loadState() {
       if (row[0]==='votes') state.votes=JSON.parse(row[1]);
       if (row[0]==='profiles') state.profiles=JSON.parse(row[1]);
     });
-    if (!hasPlayers) { state.players=DEFAULT_PLAYERS; await apiSet('players',state.players); }
+    if (!hasPlayers) {
+      state.players = DEFAULT_PLAYERS;
+      await apiSet('players', state.players);
+      // Log each default player as a system addition
+      for (const p of DEFAULT_PLAYERS) {
+        await logProfile(p.name, 'System Added', '', '', 'Loaded as default player on first run');
+      }
+    }
   } catch(e) { console.error(e); state.players=DEFAULT_PLAYERS; }
 }
 async function apiSet(key,value) {
@@ -1883,6 +1890,7 @@ document.getElementById('add-player-btn').addEventListener('click', async () => 
   document.getElementById('new-player-input').value = '';
   document.getElementById('add-player-btn').textContent = 'SAVING...';
   await savePlayers();
+  await logProfile(name, 'Admin Added', '', '', 'Added manually by admin (' + (currentUser||'unknown') + ')');
   document.getElementById('add-player-btn').textContent = 'ADD TO SQUAD +';
   showToast(name + ' added!');
   renderAdminList(); renderCards();
